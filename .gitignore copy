@@ -1,0 +1,14 @@
+.terraform.lock.hcl
+terraform.tfstate
+terraform.tfstate.backup
+.terraform/*
+.terraform.tfstate.lock.info
+inventory.yml
+provision/files/*.cnf
+provision/files/*.crt
+provision/files/*.key
+provision/files/*.csr
+provision/files/*.srl
+provision/*.crt
+provision/*.crt
+provision/*.csr

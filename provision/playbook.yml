@@ -1,0 +1,52 @@
+---
+- name: Playbook to configure IPA server step1
+  hosts: ipaserver
+  become: true
+  collections:
+    - freeipa.ansible_freeipa
+  vars:
+    ipaserver_external_ca: yes
+
+  roles:
+    - role: freeipa.ansible_freeipa.ipaserver
+      state: present
+
+  post_tasks:
+    - name: Copy CSR /root/ipa.csr from node to "{{ groups.ipaserver[0] + '-ipa.csr' }}"
+      ansible.builtin.fetch:
+        src: /root/ipa.csr
+        dest: "{{ groups.ipaserver[0] + '-ipa.csr' }}"
+        flat: yes
+
+- name: Get /root/ipa.csr, sign with our Root CA and produce chain
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Run external-ca.sh
+      ansible.builtin.command: >
+        /bin/bash
+        files/external-ca.sh
+        "{{ groups.ipaserver[0] }}"
+        "{{ ipaserver_domain | default(groups.ipaserver[0].split('.')[1:] | join('.')) }}"
+      args:
+        chdir: "{{ playbook_dir }}"
+
+- name: Playbook to configure IPA server step2
+  hosts: ipaserver
+  become: true
+  collections:
+    - freeipa.ansible_freeipa
+  vars:
+    ipaserver_external_cert_files: "/root/chain.crt"
+
+  pre_tasks:
+    - name: Copy "{{ groups.ipaserver[0] + '-chain.crt' }}" to /root/chain.crt on node
+      ansible.builtin.copy:
+        src: "{{ groups.ipaserver[0] + '-chain.crt' }}"
+        dest: /root/chain.crt
+        force: yes
+        mode: preserve
+
+  roles:
+    - role: freeipa.ansible_freeipa.ipaserver
+      state: present
